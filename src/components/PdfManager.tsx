@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   FileText, 
   Upload, 
@@ -17,10 +17,14 @@ import {
   Play,
   Pause,
   Layers,
-  Check
+  Check,
+  Highlighter,
+  MessageSquare,
+  Bookmark,
+  PlusCircle
 } from 'lucide-react';
 import { INITIAL_PDF_MODULES } from '../data/sosiologiData';
-import { PdfModule, GradeLevel } from '../types';
+import { PdfModule, GradeLevel, PdfHighlight, PdfStickyNote } from '../types';
 
 export const PdfManager: React.FC = () => {
   const [pdfList, setPdfList] = useState<PdfModule[]>(() => {
@@ -37,17 +41,93 @@ export const PdfManager: React.FC = () => {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [activePdfViewer, setActivePdfViewer] = useState<PdfModule | null>(null);
   const [viewMode, setViewMode] = useState<'parsed' | 'iframe'>('parsed');
+  const [viewerTab, setViewerTab] = useState<'content' | 'annotations'>('content');
 
   // Text-to-Speech states in PDF viewer
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [isPausedAudio, setIsPausedAudio] = useState(false);
 
-  // Upload form state
+  // Annotations state stored in localStorage
+  const [highlights, setHighlights] = useState<PdfHighlight[]>(() => {
+    try {
+      const saved = localStorage.getItem('sosiologi_pdf_highlights');
+      return saved ? JSON.parse(saved) : [
+        { id: 'hl-1', pdfId: 'pdf-1', textSnippet: 'Interaksi antarindividu maupun kelompok membentuk keteraturan sosial (social order).', color: 'yellow', timestamp: '27 Jul 2026' }
+      ];
+    } catch {
+      return [];
+    }
+  });
+
+  const [stickyNotes, setStickyNotes] = useState<PdfStickyNote[]>(() => {
+    try {
+      const saved = localStorage.getItem('sosiologi_pdf_notes');
+      return saved ? JSON.parse(saved) : [
+        { id: 'note-1', pdfId: 'pdf-1', comment: 'Catat untuk bahan ujian akhir bab sosiologi kelas 10.', author: 'Guru Sosiologi', timestamp: '27 Jul 2026', selectedText: 'Hakikat dan Ruang Lingkup' }
+      ];
+    } catch {
+      return [];
+    }
+  });
+
+  const [newNoteComment, setNewNoteComment] = useState('');
+  const [newNoteSnippet, setNewNoteSnippet] = useState('');
+  const [selectedHighlightColor, setSelectedHighlightColor] = useState<'yellow' | 'green' | 'blue' | 'purple'>('yellow');
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('sosiologi_pdf_highlights', JSON.stringify(highlights));
+    } catch {}
+  }, [highlights]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('sosiologi_pdf_notes', JSON.stringify(stickyNotes));
+    } catch {}
+  }, [stickyNotes]);
+
+
   const [newTitle, setNewTitle] = useState('');
   const [newGrade, setNewGrade] = useState<GradeLevel>(10);
   const [newChapter, setNewChapter] = useState('');
   const [newSummary, setNewSummary] = useState('');
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+
+  const handleAddHighlight = (snippet: string) => {
+    if (!activePdfViewer) return;
+    const newHl: PdfHighlight = {
+      id: `hl-${Date.now()}`,
+      pdfId: activePdfViewer.id,
+      textSnippet: snippet,
+      color: selectedHighlightColor,
+      timestamp: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+    };
+    setHighlights([newHl, ...highlights]);
+  };
+
+  const handleDeleteHighlight = (id: string) => {
+    setHighlights(highlights.filter(h => h.id !== id));
+  };
+
+  const handleAddStickyNote = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activePdfViewer || !newNoteComment) return;
+    const newNote: PdfStickyNote = {
+      id: `note-${Date.now()}`,
+      pdfId: activePdfViewer.id,
+      comment: newNoteComment,
+      author: 'Pengguna / Siswa',
+      timestamp: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      selectedText: newNoteSnippet || 'Catatan Dokumen'
+    };
+    setStickyNotes([newNote, ...stickyNotes]);
+    setNewNoteComment('');
+    setNewNoteSnippet('');
+  };
+
+  const handleDeleteStickyNote = (id: string) => {
+    setStickyNotes(stickyNotes.filter(n => n.id !== id));
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -310,19 +390,37 @@ export const PdfManager: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
+                {/* Viewer Tab Toggle (Content vs Annotations) */}
+                <div className="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700">
+                  <button
+                    onClick={() => setViewerTab('content')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${viewerTab === 'content' ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:text-white'}`}
+                  >
+                    <BookOpen className="w-3.5 h-3.5" />
+                    Bahan Ajar
+                  </button>
+                  <button
+                    onClick={() => setViewerTab('annotations')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${viewerTab === 'annotations' ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:text-white'}`}
+                  >
+                    <Bookmark className="w-3.5 h-3.5" />
+                    Anotasi & Catatan ({highlights.filter(h => h.pdfId === activePdfViewer.id).length + stickyNotes.filter(n => n.pdfId === activePdfViewer.id).length})
+                  </button>
+                </div>
+
                 {/* View Mode Toggle */}
                 <div className="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700">
                   <button
                     onClick={() => setViewMode('parsed')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${viewMode === 'parsed' ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:text-white'}`}
                   >
-                    📖 Bahan Ajar Terparsing
+                    📖 Terparsing
                   </button>
                   <button
                     onClick={() => setViewMode('iframe')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${viewMode === 'iframe' ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:text-white'}`}
                   >
-                    📄 Dokumen Asli PDF
+                    📄 PDF Asli
                   </button>
                 </div>
 
@@ -337,78 +435,266 @@ export const PdfManager: React.FC = () => {
 
             {/* Modal Content */}
             <div className="flex-1 bg-slate-50 overflow-y-auto">
-              {viewMode === 'parsed' ? (
-                <div className="p-6 lg:p-8 max-w-3xl mx-auto space-y-6">
-                  {/* Audio Reader Toolbar */}
-                  <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                        <Volume2 className="w-5 h-5" />
+              {viewerTab === 'content' ? (
+                viewMode === 'parsed' ? (
+                  <div className="p-6 lg:p-8 max-w-3xl mx-auto space-y-6">
+                    {/* Audio Reader Toolbar */}
+                    <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                          <Volume2 className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-sm text-slate-900">Audio Pembacaan Bahan Ajar</h4>
+                          <p className="text-xs text-slate-500">Dengarkan materi sosiologi ini dibacakan secara nyaring</p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="font-bold text-sm text-slate-900">Audio Pembacaan Bahan Ajar</h4>
-                        <p className="text-xs text-slate-500">Dengarkan materi sosiologi ini dibacakan secara nyaring</p>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleToggleSpeech(activePdfViewer.parsedContent || activePdfViewer.summary)}
+                          className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all shadow-xs ${
+                            isPlayingAudio 
+                              ? 'bg-rose-600 hover:bg-rose-500 text-white animate-pulse' 
+                              : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+                          }`}
+                        >
+                          {isPlayingAudio ? <Square className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                          <span>{isPlayingAudio ? 'Matikan Suara' : 'Mulai Baca Nyaring'}</span>
+                        </button>
+
+                        {isPlayingAudio && (
+                          <button
+                            onClick={handlePauseResumeSpeech}
+                            className="px-3 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold transition-all"
+                          >
+                            {isPausedAudio ? 'Lanjut' : 'Jeda'}
+                          </button>
+                        )}
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleToggleSpeech(activePdfViewer.parsedContent || activePdfViewer.summary)}
-                        className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all shadow-xs ${
-                          isPlayingAudio 
-                            ? 'bg-rose-600 hover:bg-rose-500 text-white animate-pulse' 
-                            : 'bg-indigo-600 hover:bg-indigo-500 text-white'
-                        }`}
-                      >
-                        {isPlayingAudio ? <Square className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-                        <span>{isPlayingAudio ? 'Matikan Suara' : 'Mulai Baca Nyaring'}</span>
-                      </button>
+                    {/* Highlight Color Selector Bar */}
+                    <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Highlighter className="w-4 h-4 text-indigo-600" />
+                        <span className="text-xs font-bold text-slate-900">Pilih Warna Sorotan (Highlight):</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {(['yellow', 'green', 'blue', 'purple'] as const).map((color) => (
+                          <button
+                            key={color}
+                            onClick={() => setSelectedHighlightColor(color)}
+                            className={`w-6 h-6 rounded-full border-2 transition-transform ${
+                              selectedHighlightColor === color ? 'scale-125 border-slate-900 shadow-sm' : 'border-transparent'
+                            } ${
+                              color === 'yellow' ? 'bg-amber-300' :
+                              color === 'green' ? 'bg-emerald-300' :
+                              color === 'blue' ? 'bg-sky-300' : 'bg-purple-300'
+                            }`}
+                            title={`Warna ${color}`}
+                          />
+                        ))}
+                      </div>
+                    </div>
 
-                      {isPlayingAudio && (
+                    {/* Parsed Text Box with Annotation Triggers */}
+                    <div className="bg-white rounded-2xl p-6 lg:p-8 border border-slate-200 shadow-xs space-y-4">
+                      <div className="border-b border-slate-100 pb-4 flex items-center justify-between">
+                        <div>
+                          <span className="px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold">
+                            Hasil Ekstraksi & Parsing PDF
+                          </span>
+                          <h3 className="text-lg font-bold text-slate-900 mt-2">{activePdfViewer.title}</h3>
+                          <p className="text-xs text-slate-500">Penulis/Sumber: {activePdfViewer.author} • Diunggah: {activePdfViewer.uploadDate}</p>
+                        </div>
+
                         <button
-                          onClick={handlePauseResumeSpeech}
-                          className="px-3 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold transition-all"
+                          onClick={() => setViewerTab('annotations')}
+                          className="px-3.5 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold transition-colors flex items-center gap-1.5"
                         >
-                          {isPausedAudio ? 'Lanjut' : 'Jeda'}
+                          <Bookmark className="w-3.5 h-3.5" />
+                          Lihat Catatan ({highlights.filter(h => h.pdfId === activePdfViewer.id).length})
                         </button>
+                      </div>
+
+                      <div className="prose prose-slate text-xs lg:text-sm leading-relaxed whitespace-pre-line text-slate-700 relative group">
+                        {activePdfViewer.parsedContent}
+                      </div>
+
+                      {/* Quick Highlight Action Button */}
+                      <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
+                        <button
+                          onClick={() => {
+                            handleAddHighlight(activePdfViewer.parsedContent?.slice(0, 120) || activePdfViewer.summary);
+                            alert("Berhasil menambahkan sorotan (highlight) teks ke catatan dokumen!");
+                          }}
+                          className="px-4 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold border border-amber-200 transition-colors flex items-center gap-1.5"
+                        >
+                          <Highlighter className="w-3.5 h-3.5" />
+                          Highlight Paragraf Utama Ini
+                        </button>
+                      </div>
+
+                      {activePdfViewer.keyConcepts && (
+                        <div className="pt-4 border-t border-slate-100">
+                          <h4 className="font-bold text-xs uppercase tracking-wider text-slate-500 mb-2">Konsep Kunci Teridentifikasi:</h4>
+                          <div className="flex flex-wrap gap-2">
+                            {activePdfViewer.keyConcepts.map((c, i) => (
+                              <span key={i} className="px-3 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-semibold text-xs border border-indigo-100">
+                                #{c}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <iframe
+                    src={activePdfViewer.url}
+                    className="w-full h-full border-0"
+                    title={activePdfViewer.title}
+                  />
+                )
+              ) : (
+                /* Annotations & Sticky Notes Tab */
+                <div className="p-6 lg:p-8 max-w-3xl mx-auto space-y-6">
+                  {/* Add Sticky Note Form */}
+                  <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-4">
+                    <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+                      <MessageSquare className="w-5 h-5 text-indigo-600" />
+                      <h3 className="font-bold text-base text-slate-900">Tambah Catatan Sticky Note</h3>
+                    </div>
+
+                    <form onSubmit={handleAddStickyNote} className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                          Referensi Teks / Bagian Dokumen
+                        </label>
+                        <input
+                          type="text"
+                          value={newNoteSnippet}
+                          onChange={(e) => setNewNoteSnippet(e.target.value)}
+                          placeholder="Contoh: Sub-bab Hakikat Sosiologi hal. 3"
+                          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-hidden focus:border-indigo-500 font-medium"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                          Komentar / Catatan Studi *
+                        </label>
+                        <textarea
+                          rows={3}
+                          required
+                          value={newNoteComment}
+                          onChange={(e) => setNewNoteComment(e.target.value)}
+                          placeholder="Tuliskan analisis, pertanyaan, atau catatan penting di sini..."
+                          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-hidden focus:border-indigo-500 font-medium resize-none"
+                        />
+                      </div>
+
+                      <div className="flex justify-end">
+                        <button
+                          type="submit"
+                          className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md transition-all flex items-center gap-1.5"
+                        >
+                          <PlusCircle className="w-4 h-4" />
+                          Simpan Sticky Note
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+
+                  {/* Highlights List */}
+                  <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-4">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                      <div className="flex items-center gap-2">
+                        <Highlighter className="w-4 h-4 text-amber-500" />
+                        <h3 className="font-bold text-sm text-slate-900">Sorotan Teks (Highlights)</h3>
+                      </div>
+                      <span className="text-xs font-semibold text-slate-500">
+                        {highlights.filter(h => h.pdfId === activePdfViewer.id).length} Sorotan
+                      </span>
+                    </div>
+
+                    <div className="space-y-3">
+                      {highlights.filter(h => h.pdfId === activePdfViewer.id).length > 0 ? (
+                        highlights.filter(h => h.pdfId === activePdfViewer.id).map((hl) => (
+                          <div 
+                            key={hl.id} 
+                            className={`p-4 rounded-xl border flex items-start justify-between gap-3 ${
+                              hl.color === 'yellow' ? 'bg-amber-50/70 border-amber-200 text-amber-950' :
+                              hl.color === 'green' ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950' :
+                              hl.color === 'blue' ? 'bg-sky-50/70 border-sky-200 text-sky-950' : 'bg-purple-50/70 border-purple-200 text-purple-950'
+                            }`}
+                          >
+                            <div className="space-y-1">
+                              <p className="text-xs font-medium italic">"{hl.textSnippet}"</p>
+                              <span className="text-[10px] opacity-70">Disorot pada {hl.timestamp}</span>
+                            </div>
+                            <button
+                              onClick={() => handleDeleteHighlight(hl.id)}
+                              className="p-1.5 rounded-lg hover:bg-white/60 text-slate-500 hover:text-red-600 transition-colors"
+                              title="Hapus Sorotan"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-6 text-xs text-slate-400">
+                          Belum ada sorotan teks untuk dokumen ini. Gunakan tombol highlight di tab Bahan Ajar.
+                        </div>
                       )}
                     </div>
                   </div>
 
-                  {/* Parsed Text Box */}
-                  <div className="bg-white rounded-2xl p-6 lg:p-8 border border-slate-200 shadow-xs space-y-4">
-                    <div className="border-b border-slate-100 pb-4">
-                      <span className="px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold">
-                        Hasil Ekstraksi & Parsing PDF
-                      </span>
-                      <h3 className="text-lg font-bold text-slate-900 mt-2">{activePdfViewer.title}</h3>
-                      <p className="text-xs text-slate-500">Penulis/Sumber: {activePdfViewer.author} • Diunggah: {activePdfViewer.uploadDate}</p>
-                    </div>
-
-                    <div className="prose prose-slate text-xs lg:text-sm leading-relaxed whitespace-pre-line text-slate-700">
-                      {activePdfViewer.parsedContent}
-                    </div>
-
-                    {activePdfViewer.keyConcepts && (
-                      <div className="pt-4 border-t border-slate-100">
-                        <h4 className="font-bold text-xs uppercase tracking-wider text-slate-500 mb-2">Konsep Kunci Teridentifikasi:</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {activePdfViewer.keyConcepts.map((c, i) => (
-                            <span key={i} className="px-3 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-semibold text-xs border border-indigo-100">
-                              #{c}
-                            </span>
-                          ))}
-                        </div>
+                  {/* Sticky Notes List */}
+                  <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-4">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                      <div className="flex items-center gap-2">
+                        <MessageSquare className="w-4 h-4 text-indigo-600" />
+                        <h3 className="font-bold text-sm text-slate-900">Catatan Sticky Notes</h3>
                       </div>
-                    )}
+                      <span className="text-xs font-semibold text-slate-500">
+                        {stickyNotes.filter(n => n.pdfId === activePdfViewer.id).length} Catatan
+                      </span>
+                    </div>
+
+                    <div className="space-y-3">
+                      {stickyNotes.filter(n => n.pdfId === activePdfViewer.id).length > 0 ? (
+                        stickyNotes.filter(n => n.pdfId === activePdfViewer.id).map((note) => (
+                          <div key={note.id} className="p-4 rounded-xl bg-indigo-50/40 border border-indigo-100 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-[10px] font-bold">
+                                {note.selectedText}
+                              </span>
+                              <button
+                                onClick={() => handleDeleteStickyNote(note.id)}
+                                className="p-1 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors"
+                                title="Hapus Catatan"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                            <p className="text-xs text-slate-800 font-medium leading-relaxed">
+                              {note.comment}
+                            </p>
+                            <p className="text-[10px] text-slate-400">
+                              Oleh {note.author} • {note.timestamp}
+                            </p>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-6 text-xs text-slate-400">
+                          Belum ada sticky notes untuk dokumen ini. Tambahkan catatan melalui form di atas.
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              ) : (
-                <iframe
-                  src={activePdfViewer.url}
-                  className="w-full h-full border-0"
-                  title={activePdfViewer.title}
-                />
               )}
             </div>
           </div>

@@ -43,8 +43,11 @@ async function startServer() {
       const response = await chat.sendMessage({ message });
       res.json({ reply: response.text || "Mohon maaf, terjadi kendala saat memproses jawaban." });
     } catch (error: any) {
-      console.error("Gemini Chat Error:", error);
-      res.status(500).json({ error: error.message || "Internal server error" });
+      console.error("Gemini Chat Error / Quota Exhausted:", error);
+      // Graceful fallback response when quota or API limit is exceeded
+      res.json({
+        reply: "Halo! Saat ini kuota API Gemini sedang padat atau mencapai batas maksimal (Quota Exhausted). Namun jangan khawatir, sebagai Guru Sosiologi AI cadangan, saya jelaskan bahwa dalam sosiologi, setiap fenomena interaksi sosial, kelompok sosial, dan stratifikasi dapat dianalisis secara objektif dan empiris. Silakan jelajahi materi dan kuis yang tersedia!"
+      });
     }
   });
 
@@ -67,8 +70,10 @@ async function startServer() {
 
       res.json({ summary: response.text });
     } catch (error: any) {
-      console.error("Gemini Summarize Error:", error);
-      res.status(500).json({ error: error.message || "Internal server error" });
+      console.error("Gemini Summarize Error / Quota Exhausted:", error);
+      res.json({
+        summary: `Ringkasan Materi Sosiologi (${req.body.topic || 'Materi Sosiologi'}):\n\n1. Hakikat & Konsep: Mengkaji hubungan timbal balik antarmanusia dalam kelompok sosial.\n2. Analisis Kritis: Memahami struktur sosial, nilai, norma, serta proses integrasi dan disintegrasi sosial.\n3. Penerapan Kurikulum Merdeka: Studi kasus nyata di masyarakat untuk membangun pemahaman kritis siswa.`
+      });
     }
   });
 
@@ -100,8 +105,29 @@ async function startServer() {
       const data = JSON.parse(response.text || "[]");
       res.json({ questions: data });
     } catch (error: any) {
-      console.error("Gemini Quiz Error:", error);
-      res.status(500).json({ error: error.message || "Internal server error" });
+      console.error("Gemini Quiz Error / Quota Exhausted:", error);
+      res.json({
+        questions: [
+          {
+            question: `Dalam kajian Sosiologi Kelas ${req.body.grade || 10} (${req.body.topic || 'Dinamika Sosial'}), manakah yang merupakan bentuk interaksi sosial asosiatif?`,
+            options: ["Pertikaian antarkelompok", "Kerjasama dan akomodasi", "Kompetisi tidak sehat", "Konflik terbuka"],
+            correctIndex: 1,
+            explanation: "Kerja sama (cooperation), akomodasi, asimilasi, dan akulturasi adalah bentuk interaksi sosial asosiatif yang mengarah pada persatuan."
+          },
+          {
+            question: "Apa tujuan utama dari penerapan norma sosial di dalam masyarakat?",
+            options: ["Membatasi kebebasan individu secara mutlak", "Menciptakan keteraturan, ketertiban, dan kedamaian sosial", "Menghapuskan hukum formal di negara", "Memicu konflik antargenerasi"],
+            correctIndex: 1,
+            explanation: "Norma sosial berfungsi sebagai pedoman bertingkah laku untuk menjaga ketertiban dan keteraturan sosial."
+          },
+          {
+            question: "Perubahan sosial yang terjadi secara cepat dan mendasar pada sendi-sendi pokok kehidupan disebut...",
+            options: ["Evolusi sosial", "Revolusi sosial", "Krisis moral", "Asimilasi budaya"],
+            correctIndex: 1,
+            explanation: "Revolusi adalah perubahan sosial yang berlangsung secara cepat dan menyangkut dasar atau sendi-sendi pokok kehidupan masyarakat."
+          }
+        ]
+      });
     }
   });
 

@@ -122,6 +122,12 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ setActiveTab, onOp
               <ArrowRight className="w-4 h-4" />
             </button>
             <button
+              onClick={() => setActiveTab('admin-guru')}
+              className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm font-bold transition-all flex items-center gap-2 shadow-md shadow-amber-500/20"
+            >
+              📂 Portal Administrasi Guru
+            </button>
+            <button
               onClick={onOpenAiChat}
               className="px-5 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700 text-slate-200 text-sm font-semibold transition-all flex items-center gap-2"
             >
@@ -129,10 +135,38 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ setActiveTab, onOp
               Tanya Sosiolog AI
             </button>
           </div>
+
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Teacher Profile Card Highlight */}
+      <div className="bg-gradient-to-r from-amber-50 via-indigo-50 to-slate-50 p-6 rounded-3xl border border-indigo-200 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-slate-900 to-indigo-900 text-amber-400 font-black text-xl flex items-center justify-center shrink-0 shadow-md border border-amber-400/30">
+            LS
+          </div>
+
+          <div className="space-y-1">
+            <span className="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-900 font-extrabold text-[10px] uppercase tracking-wider">
+              Guru Pengampu Sosiologi & Insya'
+            </span>
+            <h3 className="text-lg font-black text-slate-900">
+              Liyas Syarifudin, S.Pd.I., M.Pd.
+            </h3>
+            <p className="text-xs text-slate-600 max-w-xl">
+              Pendidik di Pondok Modern Al Ghozali sejak 2003 & Penulis Sastra (Puisi, Artikel, Novel Digital). Lulusan Magister Pendidikan UNINDRA Jakarta (2016).
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => setActiveTab('admin-guru')}
+          className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs transition-all shadow-md shadow-indigo-600/20 shrink-0 flex items-center gap-2 hover:scale-105"
+        >
+          <span>👤 Lihat Biografi Interaktif</span>
+          <ArrowRight className="w-4 h-4" />
+        </button>
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">

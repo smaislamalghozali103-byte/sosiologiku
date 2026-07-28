@@ -71,3 +71,113 @@ export interface UserStats {
   studyStreak: number;
   totalReadingMinutes: number;
 }
+
+export interface PdfHighlight {
+  id: string;
+  pdfId: string;
+  textSnippet: string;
+  color: 'yellow' | 'green' | 'blue' | 'purple';
+  timestamp: string;
+}
+
+export interface PdfStickyNote {
+  id: string;
+  pdfId: string;
+  comment: string;
+  author: string;
+  timestamp: string;
+  selectedText?: string;
+}
+
+// Administrasi Guru Interfaces
+export interface LessonPlan {
+  id: string;
+  title: string;
+  grade: GradeLevel;
+  chapter: string;
+  cpText: string;
+  tpText: string;
+  atpText: string;
+  duration: string;
+  activities: string;
+  assessmentMethod: string;
+  createdDate: string;
+}
+
+export interface AttendanceRecord {
+  id: string;
+  studentId: string;
+  studentName: string;
+  className: string;
+  date: string;
+  status: 'Hadir' | 'Sakit' | 'Izin' | 'Alpa';
+  notes?: string;
+}
+
+export interface StudentGradeRecord {
+  id: string;
+  studentId: string;
+  studentName: string;
+  nisn: string;
+  className: string;
+  formatif: number;
+  sumatif: number;
+  proyek: number;
+  finalScore: number;
+  kktp: number;
+  status: 'Tuntas' | 'Remedi' | 'Pengayaan';
+}
+
+export interface TeachingJournal {
+  id: string;
+  date: string;
+  timeSlot: string;
+  className: string;
+  topic: string;
+  attendanceSummary: string;
+  notes: string;
+  assignment?: string;
+}
+
+export interface StudentLogRecord {
+  id: string;
+  studentName: string;
+  className: string;
+  date: string;
+  category: 'Prestasi' | 'Disiplin' | 'Bimbingan BK' | 'Catatan Khusus';
+  description: string;
+  parentNotified: boolean;
+}
+
+export interface QuestionBankItem {
+  id: string;
+  grade: GradeLevel;
+  topic: string;
+  question: string;
+  options?: string[];
+  type: 'Pilihan Ganda' | 'Essay';
+  difficulty: 'Mudah' | 'Sedang' | 'Sulit';
+}
+
+export interface SchoolClass {
+  id: string;
+  name: string;
+  academicYear: string;
+  teacherInCharge: string;
+}
+
+export interface StudentItem {
+  id: string;
+  name: string;
+  nisn: string;
+  className: string;
+}
+
+export interface CustomChapter extends Chapter {
+  grade: GradeLevel;
+  isCustom?: boolean;
+  author?: string;
+  createdAt?: string;
+}
+
+

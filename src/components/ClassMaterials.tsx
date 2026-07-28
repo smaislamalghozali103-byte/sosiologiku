@@ -13,7 +13,9 @@ import {
   Volume2,
   Square,
   Play,
-  Pause
+  Pause,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { SOCIOLOGY_CURRICULUM } from '../data/sosiologiData';
 import { GradeLevel, Chapter } from '../types';
@@ -22,15 +24,34 @@ interface ClassMaterialsProps {
   grade: GradeLevel;
   setActiveTab: (tab: string) => void;
   onOpenAiChatWithPrompt: (prompt: string) => void;
+  isFocusMode?: boolean;
+  onToggleFocusMode?: () => void;
 }
 
 export const ClassMaterials: React.FC<ClassMaterialsProps> = ({ 
   grade, 
   setActiveTab,
-  onOpenAiChatWithPrompt 
+  onOpenAiChatWithPrompt,
+  isFocusMode,
+  onToggleFocusMode
 }) => {
-  const curriculumData = SOCIOLOGY_CURRICULUM.find(c => c.grade === grade) || SOCIOLOGY_CURRICULUM[0];
-  const [selectedChapter, setSelectedChapter] = useState<Chapter>(curriculumData.chapters[0]);
+  const [customChapters, setCustomChapters] = useState<Chapter[]>(() => {
+    try {
+      const saved = localStorage.getItem('sosiologi_custom_chapters');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.filter((c: any) => c.grade === grade || !c.grade);
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  });
+
+  const baseCurriculum = SOCIOLOGY_CURRICULUM.find(c => c.grade === grade) || SOCIOLOGY_CURRICULUM[0];
+  const combinedChapters = [...baseCurriculum.chapters, ...customChapters];
+
+  const [selectedChapter, setSelectedChapter] = useState<Chapter>(combinedChapters[0] || baseCurriculum.chapters[0]);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
 
@@ -38,14 +59,27 @@ export const ClassMaterials: React.FC<ClassMaterialsProps> = ({
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [isPausedAudio, setIsPausedAudio] = useState(false);
 
-  // When grade changes, reset selected chapter to first chapter of that grade
+  // When grade changes, load custom chapters and reset selected chapter
   React.useEffect(() => {
-    const curr = SOCIOLOGY_CURRICULUM.find(c => c.grade === grade);
-    if (curr && curr.chapters.length > 0) {
-      setSelectedChapter(curr.chapters[0]);
-      setAiSummary(null);
+    try {
+      const saved = localStorage.getItem('sosiologi_custom_chapters');
+      const customForGrade = saved ? JSON.parse(saved).filter((c: any) => c.grade === grade) : [];
+      setCustomChapters(customForGrade);
+      
+      const curr = SOCIOLOGY_CURRICULUM.find(c => c.grade === grade) || SOCIOLOGY_CURRICULUM[0];
+      const merged = [...curr.chapters, ...customForGrade];
+      if (merged.length > 0) {
+        setSelectedChapter(merged[0]);
+        setAiSummary(null);
+      }
+    } catch {
+      const curr = SOCIOLOGY_CURRICULUM.find(c => c.grade === grade) || SOCIOLOGY_CURRICULUM[0];
+      if (curr.chapters.length > 0) {
+        setSelectedChapter(curr.chapters[0]);
+        setAiSummary(null);
+      }
     }
-    // Stop speech when changing grade or chapter
+
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       setIsPlayingAudio(false);
@@ -130,7 +164,7 @@ export const ClassMaterials: React.FC<ClassMaterialsProps> = ({
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      {/* Top Grade Selector Tabs */}
+      {/* Top Grade Selector Tabs & Focus Mode Trigger */}
       <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Pilih Kelas:</span>
@@ -153,8 +187,26 @@ export const ClassMaterials: React.FC<ClassMaterialsProps> = ({
             Kelas 12
           </button>
         </div>
-        <div className="text-xs font-semibold text-slate-500 px-3 py-1 bg-slate-50 rounded-lg border border-slate-100">
-          {curriculumData.title} • Kurikulum Merdeka
+
+        <div className="flex items-center gap-2">
+          {onToggleFocusMode && (
+            <button
+              onClick={onToggleFocusMode}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs ${
+                isFocusMode
+                  ? 'bg-amber-500 text-slate-950 hover:bg-amber-400'
+                  : 'bg-slate-900 hover:bg-slate-800 text-white hover:scale-105'
+              }`}
+              title="Sembunyikan sidebar & header untuk membaca bebas distraksi"
+            >
+              {isFocusMode ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5 text-amber-400" />}
+              <span>{isFocusMode ? 'Keluar Mode Fokus' : 'Mode Fokus'}</span>
+            </button>
+          )}
+
+          <div className="text-xs font-semibold text-slate-500 px-3 py-1 bg-slate-50 rounded-lg border border-slate-100 hidden sm:block">
+            {baseCurriculum.title} • Kurikulum Merdeka
+          </div>
         </div>
       </div>
 
@@ -167,13 +219,13 @@ export const ClassMaterials: React.FC<ClassMaterialsProps> = ({
               Daftar Bab Pembahasan
             </h3>
             <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-              {curriculumData.chapters.length} Bab
+              {combinedChapters.length} Bab
             </span>
           </div>
 
           <div className="space-y-2">
-            {curriculumData.chapters.map((chapter) => {
-              const isSelected = selectedChapter.id === chapter.id;
+            {combinedChapters.map((chapter) => {
+              const isSelected = selectedChapter?.id === chapter.id;
               return (
                 <button
                   key={chapter.id}
@@ -222,6 +274,22 @@ export const ClassMaterials: React.FC<ClassMaterialsProps> = ({
               </span>
               
               <div className="flex items-center gap-2 flex-wrap">
+                {/* Mode Fokus Toggle Button inside reader header */}
+                {onToggleFocusMode && (
+                  <button
+                    onClick={onToggleFocusMode}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs ${
+                      isFocusMode 
+                        ? 'bg-amber-500 text-slate-900 hover:bg-amber-400' 
+                        : 'bg-slate-900 hover:bg-slate-800 text-white hover:scale-105'
+                    }`}
+                    title="Masuk ke Mode Fokus (Sembunyikan Sidebar & Header)"
+                  >
+                    {isFocusMode ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5 text-amber-400" />}
+                    <span>{isFocusMode ? 'Keluar Fokus' : 'Mode Fokus'}</span>
+                  </button>
+                )}
+
                 {/* Text to Speech Audio Player Controls */}
                 <div className="flex items-center gap-1.5">
                   <button
@@ -234,7 +302,7 @@ export const ClassMaterials: React.FC<ClassMaterialsProps> = ({
                     title="Baca teks materi secara nyaring menggunakan suara"
                   >
                     {isPlayingAudio ? <Square className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-                    <span>{isPlayingAudio ? 'Berhentikan Suara' : '🔊 Baca Nyaring (Audio)'}</span>
+                    <span>{isPlayingAudio ? 'Berhentikan Suara' : '🔊 Baca Nyaring'}</span>
                   </button>
 
                   {isPlayingAudio && (
@@ -332,3 +400,4 @@ export const ClassMaterials: React.FC<ClassMaterialsProps> = ({
     </div>
   );
 };
+

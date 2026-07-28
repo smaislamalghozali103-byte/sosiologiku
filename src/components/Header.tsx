@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, Sparkles, Search, Bell, BookOpen } from 'lucide-react';
+import { Menu, Sparkles, Search, Bell, BookOpen, Maximize2 } from 'lucide-react';
 import { DAILY_QUOTES } from '../data/sosiologiData';
 
 interface HeaderProps {
@@ -7,13 +7,17 @@ interface HeaderProps {
   activeTab: string;
   onOpenAiChat: () => void;
   onOpenSearch: () => void;
+  isFocusMode?: boolean;
+  onToggleFocusMode?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({ 
   onToggleSidebar, 
   activeTab, 
   onOpenAiChat,
-  onOpenSearch
+  onOpenSearch,
+  isFocusMode,
+  onToggleFocusMode
 }) => {
   const [quoteIndex, setQuoteIndex] = React.useState(0);
 
@@ -62,10 +66,22 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       <div className="flex items-center gap-3">
+        {/* Focus Mode Quick Button */}
+        {onToggleFocusMode && (
+          <button
+            onClick={onToggleFocusMode}
+            className="flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition-all shadow-xs hover:scale-105"
+            title="Sembunyikan Sidebar & Header untuk membaca bebas distraksi"
+          >
+            <Maximize2 className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">Mode Fokus</span>
+          </button>
+        )}
+
         {/* Advanced Search Bar Trigger */}
         <button
           onClick={onOpenSearch}
-          className="hidden md:flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-medium transition-all w-64 border border-slate-200"
+          className="hidden md:flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-medium transition-all w-52 xl:w-64 border border-slate-200"
         >
           <Search className="w-4 h-4 text-slate-400" />
           <span>Cari materi, PDF, atau kuis...</span>
@@ -100,3 +116,4 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
+

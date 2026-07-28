@@ -9,7 +9,8 @@ import {
   Sparkles, 
   Menu, 
   X,
-  Compass
+  Compass,
+  Briefcase
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -29,6 +30,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Beranda Utama', icon: LayoutDashboard },
+    { id: 'admin-guru', label: 'Administrasi Guru', icon: Briefcase, badge: 'Baru' },
     { id: 'grade-10', label: 'Sosiologi Kelas 10', icon: GraduationCap, badge: 'Kelas 10' },
     { id: 'grade-11', label: 'Sosiologi Kelas 11', icon: BookOpen, badge: 'Kelas 11' },
     { id: 'grade-12', label: 'Sosiologi Kelas 12', icon: Compass, badge: 'Kelas 12' },
@@ -36,6 +38,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'quizzes', label: 'Latihan Soal & Kuis', icon: HelpCircle },
     { id: 'discussions', label: 'Ruang Diskusi', icon: MessageSquare },
   ];
+
 
   return (
     <>
